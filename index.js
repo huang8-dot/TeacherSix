@@ -2164,3 +2164,167 @@ class Game {
 
 // 初始化游戏
 const game = new Game();
+
+
+// 反馈用户名单（可维护）
+const FEEDBACK_USERS = ['huan', 'lipeng', 'zhangfei', 'AoA', 'Lily', 'Welcome to submit your article'];
+
+// 初始化滚动字幕（支持按像素/秒设置速度）
+function initMarquee({ speedPxPerSec = 40, users = FEEDBACK_USERS } = {}) {
+  const primary = document.getElementById('marqueePrimary');
+  const clone = document.getElementById('marqueeClone');
+  const track = primary ? primary.parentElement : null;
+  if (!primary || !clone || !track) return;
+
+  function rand(min, max) { return Math.random() * (max - min) + min; }
+  function build(usersArr) {
+    const lead = '特别感谢以下用户的宝贵反馈：';
+    const names = usersArr.map(u => {
+      const gap = Math.round(rand(32, 64));
+      const smin = rand(0.85, 1.0).toFixed(2);
+      const smax = rand(1.1, 1.45).toFixed(2);
+      const pd = rand(1.2, 2.2).toFixed(2) + 's';
+      const gd = rand(2.0, 3.0).toFixed(2) + 's';
+      const delay = (-rand(0, 1.5)).toFixed(2) + 's';
+      return `<span class="marquee-name" style="--name-gap:${gap}px;--scale-min:${smin};--scale-max:${smax};--pulse-duration:${pd};--glow-duration:${gd};animation-delay:${delay}">[${u}]</span>`;
+    }).join(' ');
+    return lead + names;
+  }
+
+  function layout() {
+    const distance = primary.offsetWidth;
+    track.style.setProperty('--marquee-distance', distance + 'px');
+    track.style.setProperty('--marquee-duration', (distance / speedPxPerSec) + 's');
+  }
+
+  const source = users.slice();
+  const contentHTML = build(source);
+  primary.innerHTML = contentHTML;
+  clone.innerHTML = contentHTML;
+  layout();
+
+  let resizeTimer;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(layout, 150);
+  });
+
+  track.addEventListener('animationiteration', () => {
+    for (let i = source.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      const t = source[i]; source[i] = source[j]; source[j] = t;
+    }
+    speedPxPerSec = Math.round(rand(30, 50));
+    const html = build(source);
+    primary.innerHTML = html;
+    clone.innerHTML = html;
+    layout();
+  });
+}
+
+// 启动滚动字幕
+initMarquee({ speedPxPerSec: 40 });
+
+// 弹幕引擎（B站风格）
+function initDanmaku({
+  speedRangePxPerSec = [70, 160],
+  fontSizeRange = [14, 24],
+  spawnIntervalMs = 800,
+  maxConcurrent = 30
+} = {}) {
+  const container = document.getElementById('danmaku');
+  if (!container) return;
+
+  const names = FEEDBACK_USERS.slice();
+  let idx = 0;
+
+  const PASTEL_COLORS = ['#ff9aa2','#ffb7b2','#ffdac1','#e2f0cb','#b5ead7','#c7ceea','#a0e7e5','#74c0fc','#f7b2d9','#ffd1dc'];
+  const CUTE_EMOJIS = ['🌸','💖','✨','🎀','🍓','🧸','🌈','🐻','🐱','🦄','🍭','🌼'];
+
+  function rand(min, max) { return Math.random() * (max - min) + min; }
+  function shuffle(arr) {
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }
+
+  // 计算轨道
+  function computeLanes() {
+    const h = container.clientHeight || 80;
+    const baseLine = 22; // 基础行高
+    const lanes = Math.max(3, Math.min(6, Math.floor(h / baseLine)));
+    const laneTops = Array.from({ length: lanes }, (_, i) => Math.round((i + 0.5) * (h / lanes) - baseLine / 2));
+    return { laneTops, lanes };
+  }
+  let { laneTops, lanes } = computeLanes();
+  const laneNextAvailable = Array(lanes).fill(0);
+
+  window.addEventListener('resize', () => {
+    ({ laneTops, lanes } = computeLanes());
+    while (laneNextAvailable.length < lanes) laneNextAvailable.push(0);
+  });
+
+  function createItem(name) {
+    const item = document.createElement('span');
+    item.className = 'danmaku-item';
+    const emojiL = CUTE_EMOJIS[Math.floor(Math.random() * CUTE_EMOJIS.length)];
+    const emojiR = CUTE_EMOJIS[Math.floor(Math.random() * CUTE_EMOJIS.length)];
+    item.innerHTML = `${emojiL} [${name}] ${emojiR}`;
+    const fontSize = Math.round(rand(fontSizeRange[0], fontSizeRange[1]));
+    const color = PASTEL_COLORS[Math.floor(Math.random() * PASTEL_COLORS.length)];
+    item.style.fontSize = fontSize + 'px';
+    item.style.color = color;
+    item.style.textShadow = `0 0 8px ${color}`;
+    return item;
+  }
+
+  function spawn() {
+    if (!container.isConnected) return;
+    if (container.childElementCount >= maxConcurrent) return;
+
+    if (idx >= names.length) {
+      shuffle(names);
+      idx = 0;
+    }
+    const name = names[idx++];
+    const item = createItem(name);
+    container.appendChild(item);
+
+    // 测量宽度
+    const itemWidth = item.offsetWidth;
+    const containerWidth = container.clientWidth || 800;
+    const speed = Math.round(rand(speedRangePxPerSec[0], speedRangePxPerSec[1]));
+    const distance = containerWidth + itemWidth + 20;
+    const duration = distance / speed; // 秒
+
+    // 选择轨道（避免重叠）
+    const now = performance.now();
+    let laneIndex = Math.floor(rand(0, lanes));
+    for (let k = 0; k < lanes; k++) {
+      const i = (laneIndex + k) % lanes;
+      if (now >= laneNextAvailable[i]) { laneIndex = i; break; }
+    }
+
+    // 计算下一可用时间（简单间隔 = itemWidth / speed * 1000）
+    laneNextAvailable[laneIndex] = now + (itemWidth / speed) * 1000 * 1.2;
+
+    // 应用变量与定位
+    item.style.setProperty('--distance', distance + 'px');
+    item.style.setProperty('--duration', duration + 's');
+    item.style.top = Math.max(0, laneTops[laneIndex]) + 'px';
+    item.style.right = -itemWidth + 'px';
+
+    item.addEventListener('animationend', () => {
+      item.remove();
+    }, { once: true });
+  }
+
+  const timer = setInterval(spawn, spawnIntervalMs);
+  // 页面可选卸载处理
+  window.addEventListener('beforeunload', () => clearInterval(timer));
+}
+
+// 启动弹幕
+initDanmaku({ speedRangePxPerSec: [80, 160], fontSizeRange: [14, 24], spawnIntervalMs: 800, maxConcurrent: 28 });

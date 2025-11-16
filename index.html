@@ -1021,6 +1021,111 @@
         cursor: not-allowed;
       }
 
+      /* 滚动字幕 */
+      .marquee {
+        width: 100%;
+        overflow: hidden;
+        white-space: nowrap;
+        min-height: 28px;
+        display: none;
+      }
+
+      .marquee-track {
+        display: inline-flex;
+        align-items: center;
+        will-change: transform;
+        animation: marquee-scroll var(--marquee-duration, 20s) linear infinite;
+      }
+
+      .marquee-content {
+        color: #2d3436;
+        font-size: 14px;
+        line-height: 1.6;
+        padding-right: 48px;
+      }
+
+      @keyframes marquee-scroll {
+        from {
+          transform: translateX(0);
+        }
+        to {
+          transform: translateX(calc(-1 * var(--marquee-distance, 600px)));
+        }
+      }
+
+      /* 邮箱展示区域 */
+      .contact-email {
+        width: 100%;
+        text-align: center;
+        margin-top: 8px;
+        font-size: 14px;
+        color: #2d3436;
+      }
+
+      .email-link {
+        color: #667eea;
+        font-weight: 700;
+        text-decoration: none;
+      }
+
+      .email-link:hover {
+        text-decoration: underline;
+        filter: brightness(1.1);
+      }
+
+      .hard-mode .email-link {
+        color: #e74c3c;
+      }
+
+      /* 名字酷炫动画 */
+      .marquee-name {
+        display: inline-block;
+        transform-origin: center bottom;
+        padding-right: var(--name-gap, 40px);
+        animation: name-pulse var(--pulse-duration, 1.8s) ease-in-out infinite
+            alternate,
+          name-glow var(--glow-duration, 2.4s) ease-in-out infinite alternate;
+      }
+
+      @keyframes name-pulse {
+        from {
+          transform: scale(var(--scale-min, 0.9));
+        }
+        to {
+          transform: scale(var(--scale-max, 1.35));
+        }
+      }
+
+      @keyframes name-glow {
+        from {
+          text-shadow: 0 0 0 rgba(255, 255, 255, 0);
+        }
+        to {
+          text-shadow: 0 0 8px rgba(255, 255, 255, 0.5);
+        }
+      }
+
+      /* 响应式优化 */
+      @media (max-width: 768px) {
+        .marquee-content,
+        .contact-email {
+          font-size: 13px;
+        }
+        .marquee-name {
+          padding-right: 32px;
+        }
+      }
+
+      @media (max-width: 480px) {
+        .marquee-content,
+        .contact-email {
+          font-size: 12px;
+        }
+        .marquee-name {
+          padding-right: 28px;
+        }
+      }
+
       /* 提示信息 */
       .hint-box {
         background: linear-gradient(135deg, #a29bfe 0%, #6c5ce7 100%);
@@ -2238,6 +2343,46 @@
       .reward-input-item .reward-name {
         flex: 1;
       }
+      /* 弹幕容器 */
+      .danmaku {
+        width: 100%;
+        height: 80px;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .danmaku-item {
+        position: absolute;
+        right: 0;
+        top: 0;
+        will-change: transform;
+        white-space: nowrap;
+        pointer-events: none;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+        font-weight: 600;
+        animation: danmaku-left var(--duration, 10s) linear forwards;
+      }
+
+      @keyframes danmaku-left {
+        from {
+          transform: translateX(0);
+        }
+        to {
+          transform: translateX(calc(-1 * var(--distance, 600px)));
+        }
+      }
+
+      @media (max-width: 768px) {
+        .danmaku {
+          height: 64px;
+        }
+      }
+
+      @media (max-width: 480px) {
+        .danmaku {
+          height: 52px;
+        }
+      }
     </style>
   </head>
   <body>
@@ -2420,6 +2565,23 @@
             💡 Hint 提示
           </button>
         </div>
+        <div class="marquee" aria-label="特别感谢名单">
+          <div class="marquee-track">
+            <span class="marquee-content" id="marqueePrimary"></span>
+            <span
+              class="marquee-content"
+              aria-hidden="true"
+              id="marqueeClone"
+            ></span>
+          </div>
+        </div>
+        <div class="danmaku" id="danmaku" aria-label="弹幕感谢名单"></div>
+        <div class="contact-email">
+          Contact Information：
+          <a href="mailto:huangameing@163.com" class="email-link"
+            >huangameing@163.com</a
+          >
+        </div>
       </div>
     </div>
 
@@ -2582,4 +2744,3 @@
     <script src="index.js"></script>
   </body>
 </html>
-/
